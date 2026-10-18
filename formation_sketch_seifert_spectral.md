@@ -4,6 +4,15 @@
 **Scope:** Algebraic cores only. Continuous asymptotics and global adelic models remain exploratory.  
 **Date:** 2026-10-18 (corrected)
 
+## Status
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| Live equality theorems (4 cases) | verified by Action | greps `casson_su2_eq_brieskorn_*` |
+| Prose overclaims | blocked | topological sphere, filling circles, constant weight, unscoped Haar |
+| Casson mismatch Σ(3,4,5) / Σ(3,5,7) | open | see issue on original-research |
+| Full Lean build | skipped | Mathlib dependency too heavy for default CI |
+
 ---
 
 ## 1. The Seifert–Brieskorn Bridge (Homology Sphere)
