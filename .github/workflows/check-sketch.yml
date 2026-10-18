@@ -1,0 +1,55 @@
+name: Check formation sketch claims
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'formation_sketch_seifert_spectral.md'
+  pull_request:
+    paths:
+      - 'formation_sketch_seifert_spectral.md'
+  workflow_dispatch:
+
+jobs:
+  verify-claims:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail on known overclaims
+        run: |
+          set -euo pipefail
+          FILE=formation_sketch_seifert_spectral.md
+          echo "Checking $FILE for prohibited claims..."
+
+          # Must not claim topological sphere for 3-manifold links
+          if grep -E -i 'topological sphere' "$FILE" | grep -v -E 'n ≥ 4|not a topological|not turned into|carries no'; then
+            echo "ERROR: Unscoped 'topological sphere' claim found."
+            exit 1
+          fi
+
+          # Must not claim spectrum fills circles
+          if grep -E -i 'filling|fills the circle|whole circles' "$FILE"; then
+            echo "ERROR: Spectrum described as filling circles."
+            exit 1
+          fi
+
+          # Must not claim constant step weight magnitude √2
+          if grep -E -i 'constant weight magnitude' "$FILE"; then
+            echo "ERROR: Claimed constant step weight (should be product)."
+            exit 1
+          fi
+
+          # Haar / Lyapunov must be marked open or expected
+          if grep -E -i 'Haar measure is the unique' "$FILE" | grep -v -E 'expected|not formalized|open'; then
+            echo "ERROR: Haar uniqueness stated as fact."
+            exit 1
+          fi
+
+          # Casson table must not include the mismatched rows as equal
+          if grep -E 'Σ\(3,4,5\).*yes|\u03a3\(3,5,7\).*yes' "$FILE"; then
+            echo "ERROR: Mismatched Casson rows marked as agreeing."
+            exit 1
+          fi
+
+          echo "All claim checks passed."
