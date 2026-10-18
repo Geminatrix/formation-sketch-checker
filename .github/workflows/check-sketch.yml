@@ -16,38 +16,57 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fail on known overclaims
+      - name: Clone upstream Lean sources
+        run: |
+          git clone --depth 1 https://github.com/sneed-and-feed/original-research.git /tmp/original-research || true
+          git clone --depth 1 https://github.com/sneed-and-feed/adelic-spectral-zeta.git /tmp/adelic-spectral-zeta || true
+
+      - name: Verify live Casson equality theorems exist
+        run: |
+          set -euo pipefail
+          echo "Checking live Lean sources for certified equalities..."
+          COUNT=$(grep -c 'casson_su2_eq_brieskorn_' /tmp/original-research/Formalization/BrieskornSU2CharacterVariety/CassonInvariant.lean || true)
+          echo "Found $COUNT equality theorems"
+          if [ "$COUNT" -lt 4 ]; then
+            echo "ERROR: Expected at least 4 casson_su2_eq_brieskorn_* theorems"
+            exit 1
+          fi
+          # Confirm the four known cases
+          for case in 2_3_5 2_3_7 2_3_11 2_5_7; do
+            if ! grep -q "casson_su2_eq_brieskorn_$case" /tmp/original-research/Formalization/BrieskornSU2CharacterVariety/CassonInvariant.lean; then
+              echo "ERROR: Missing equality for $case"
+              exit 1
+            fi
+          done
+          echo "Live equality theorems verified."
+
+      - name: Fail on known overclaims in note
         run: |
           set -euo pipefail
           FILE=formation_sketch_seifert_spectral.md
           echo "Checking $FILE for prohibited claims..."
 
-          # Must not claim topological sphere for 3-manifold links
           if grep -E -i 'topological sphere' "$FILE" | grep -v -E 'n ≥ 4|not a topological|not turned into|carries no'; then
             echo "ERROR: Unscoped 'topological sphere' claim found."
             exit 1
           fi
 
-          # Must not claim spectrum fills circles
           if grep -E -i 'filling|fills the circle|whole circles' "$FILE"; then
             echo "ERROR: Spectrum described as filling circles."
             exit 1
           fi
 
-          # Must not claim constant step weight magnitude √2
           if grep -E -i 'constant weight magnitude' "$FILE"; then
             echo "ERROR: Claimed constant step weight (should be product)."
             exit 1
           fi
 
-          # Haar / Lyapunov must be marked open or expected
           if grep -E -i 'Haar measure is the unique' "$FILE" | grep -v -E 'expected|not formalized|open'; then
             echo "ERROR: Haar uniqueness stated as fact."
             exit 1
           fi
 
-          # Casson table must not include the mismatched rows as equal
-          if grep -E 'Σ\(3,4,5\).*yes|\u03a3\(3,5,7\).*yes' "$FILE"; then
+          if grep -E 'Σ\(3,4,5\).*yes|Σ\(3,5,7\).*yes' "$FILE"; then
             echo "ERROR: Mismatched Casson rows marked as agreeing."
             exit 1
           fi
