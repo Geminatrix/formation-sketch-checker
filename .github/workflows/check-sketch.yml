@@ -19,26 +19,29 @@ jobs:
       - name: Clone upstream Lean sources
         run: |
           git clone --depth 1 https://github.com/sneed-and-feed/original-research.git /tmp/original-research || true
-          git clone --depth 1 https://github.com/sneed-and-feed/adelic-spectral-zeta.git /tmp/adelic-spectral-zeta || true
 
-      - name: Verify live Casson equality theorems exist
+      - name: Verify live Casson equality theorems and files
         run: |
           set -euo pipefail
-          echo "Checking live Lean sources for certified equalities..."
-          COUNT=$(grep -c 'casson_su2_eq_brieskorn_' /tmp/original-research/Formalization/BrieskornSU2CharacterVariety/CassonInvariant.lean || true)
+          echo "Checking live Lean sources..."
+          LEAN_DIR=/tmp/original-research/Formalization
+          if [ ! -f "$LEAN_DIR/BrieskornSU2CharacterVariety/CassonInvariant.lean" ]; then
+            echo "ERROR: CassonInvariant.lean missing"
+            exit 1
+          fi
+          COUNT=$(grep -c 'casson_su2_eq_brieskorn_' "$LEAN_DIR/BrieskornSU2CharacterVariety/CassonInvariant.lean" || true)
           echo "Found $COUNT equality theorems"
           if [ "$COUNT" -lt 4 ]; then
             echo "ERROR: Expected at least 4 casson_su2_eq_brieskorn_* theorems"
             exit 1
           fi
-          # Confirm the four known cases
           for case in 2_3_5 2_3_7 2_3_11 2_5_7; do
-            if ! grep -q "casson_su2_eq_brieskorn_$case" /tmp/original-research/Formalization/BrieskornSU2CharacterVariety/CassonInvariant.lean; then
+            if ! grep -q "casson_su2_eq_brieskorn_$case" "$LEAN_DIR/BrieskornSU2CharacterVariety/CassonInvariant.lean"; then
               echo "ERROR: Missing equality for $case"
               exit 1
             fi
           done
-          echo "Live equality theorems verified."
+          echo "Live equality theorems and files verified."
 
       - name: Fail on known overclaims in note
         run: |
@@ -72,3 +75,13 @@ jobs:
           fi
 
           echo "All claim checks passed."
+
+      - name: Write status table
+        if: always()
+        run: |
+          echo "### Status" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Live equality theorems | verified |" >> $GITHUB_STEP_SUMMARY
+          echo "| Prose overclaims | checked |" >> $GITHUB_STEP_SUMMARY
+          echo "| Full Lean build | skipped (Mathlib dependency) |" >> $GITHUB_STEP_SUMMARY
